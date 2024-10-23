@@ -19,10 +19,11 @@ app
   .UseOxpecker(
     [
       GET [
-        route "/" Controllers.Index.index
-        route "/about" Controllers.About.index
-        route "/posts/new" Controllers.NewPost.newPost
+        route "/" Controllers.Public.index
+        route "/about" Controllers.Public.about
+        route "/posts" Controllers.Posts.newPost
       ]
+      CsrfPost [ route "/posts" Controllers.Posts.savePost ]
     ]
   )
 |> ignore

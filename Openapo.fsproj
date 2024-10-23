@@ -5,12 +5,10 @@
   <ItemGroup>
     <Compile Include="Extensions.fs" />
     <Compile Include="Views/Layout.fs" />
-    <Compile Include="Views/Index.fs" />
-    <Compile Include="Views\NewPost.fs" />
-    <Compile Include="Views/About.fs" />
-    <Compile Include="Controllers/Index.fs" />
-    <Compile Include="Controllers/About.fs" />
-    <Compile Include="Controllers\NewPost.fs" />
+    <Compile Include="Views/Public.fs" />
+    <Compile Include="Views/Posts.fs" />
+    <Compile Include="Controllers/Public.fs" />
+    <Compile Include="Controllers/Posts.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

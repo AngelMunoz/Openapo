@@ -14,7 +14,7 @@ template.innerHTML = `
 `;
 
 class MarkdownInput extends HTMLElement {
-  static observedAttributes = ["text"];
+  static observedAttributes = ["text", "required"];
   static formAssociated = true;
 
   constructor() {
@@ -23,7 +23,12 @@ class MarkdownInput extends HTMLElement {
     this.appendChild(template.content.cloneNode(true));
     this.textarea = this.querySelector("textarea");
     this.preview = this.querySelector(".markdown-preview");
+
     this.abortCtrl = new AbortController();
+
+    this.required = this.hasAttribute("required");
+    if (this.required)
+        this.textarea.setAttribute("required", this.required);
   }
 
   connectedCallback() {
@@ -50,6 +55,10 @@ class MarkdownInput extends HTMLElement {
       this.textarea.value = newValue;
       this.preview.innerHTML = marked.parse(newValue);
       this.internals.setFormValue(newValue, newValue);
+    }
+    if (name === "required") {
+        this.textarea.setAttribute("required", this.hasAttribute("required"));
+        this.required = this.hasAttribute("required");
     }
   }
 

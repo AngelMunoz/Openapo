@@ -1,0 +1,6 @@
+{
+  "connection": "User ID=posgres;Password=posgres;Host=localhost;Port=5432;Database=openapo",
+  "migrations": "./migrations",
+  "tableName": "__migrondi_migrations",
+  "driver": "postgres"
+}

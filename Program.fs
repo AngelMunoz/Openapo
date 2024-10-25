@@ -8,15 +8,7 @@ open Services
 
 let builder = WebApplication.CreateBuilder(Environment.GetCommandLineArgs())
 
-let config =
-  builder.Configuration
-    .AddJsonFile("appsettings.json")
-    .AddEnvironmentVariables()
-    .AddCommandLine(Environment.GetCommandLineArgs())
-    .Build()
-
 builder.Services
-  .AddSingleton<IConfiguration>(config)
   .AddSingleton<NpgsqlDataSource>(fun services ->
     Database.getDataSource(services.GetService<IConfiguration>()))
   .AddSingleton<ConnectionFactory>(fun services ->

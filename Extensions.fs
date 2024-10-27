@@ -59,3 +59,13 @@ let inline CsrfPatch routes =
 
 let inline CsrfDelete routes =
   applyBefore verifyAntiforgery (DELETE routes)
+
+
+module PermaPath =
+  open System.Web
+
+  let toUrl(path: string) =
+    path.Replace("#", "~~") |> HttpUtility.UrlEncode
+
+  let fromUrl(path: string) =
+    path |> HttpUtility.UrlDecode |> _.Replace("~~", "#")

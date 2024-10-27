@@ -180,7 +180,11 @@ module Queries =
 
 
 module Posts =
-  let getPostService(connectionFactory: ConnectionFactory) =
+  open Services
+
+  let getPostService
+    (connectionFactory: ConnectionFactory, markdown: MarkdownService)
+    =
     { new PostsService with
         member _.findPostById id = task {
           use! connection = connectionFactory.CreateConnectionAsync()
@@ -334,10 +338,10 @@ module Posts =
             |> List.map(fun sLike -> {
               id = sLike.id
               title = sLike.title
-              summary = sLike.content[0..100]
+              summary = sLike.content[0..100] |> markdown.toText
               authorName = sLike.authorName
               permanentPath =
-                $"/posts/{HttpUtility.HtmlEncode(sLike.title)}_{sLike.slug}"
+                $"/posts/{PermaPath.toUrl sLike.title}_{sLike.slug}"
               publishedAt = sLike.publishedAt
             })
 

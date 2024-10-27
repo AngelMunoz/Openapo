@@ -46,7 +46,7 @@ type Public = class end
 
 type Public with
 
-  static member index(postListSummary, ?env: LayoutEnv) =
+  static member inline index(postListSummary, ?env: LayoutEnv) =
     Page(
       h(
         "article.uk-padding",
@@ -62,8 +62,11 @@ type Public with
       ?env = env
     )
 
+  static member inline post(post: PostPageParams, ?env: LayoutEnv) =
+    Post(post, ?env = env)
 
-  static member about(?env: LayoutEnv) =
+
+  static member inline about(?env: LayoutEnv) =
 
     Page(
       h(

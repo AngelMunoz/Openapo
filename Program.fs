@@ -34,7 +34,7 @@ app
         route "/" Controllers.Public.index
         route "/about" Controllers.Public.about
         route "/posts" Controllers.Posts.newPost
-        routef "/posts/%s" Controllers.Public.postDetail
+        routef "/posts/{%s}" Controllers.Public.postDetail
       ]
       CsrfPost [ route "/posts" Controllers.Posts.savePost ]
     ]

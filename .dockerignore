@@ -2,8 +2,14 @@
 **/bin/
 **/obj/
 **/out/
+migrations/
+.github/
+.idea/
+.vs/
+
 
 # files
 fly.toml
 Dockerfile*
 **/*.md
+migrondi.json

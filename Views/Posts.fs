@@ -6,26 +6,30 @@ open Oxpecker
 open Hox
 open Layout
 
+
+
+module Posts =
+  module Components =
+
+    let getAuthorOptions(getAuthors: unit -> Task<Author list>) =
+      fragment(
+        task {
+          let! authors = getAuthors()
+
+          return seq {
+            h("option[value=null]", text "Select an author")
+
+            for author in authors do
+              h($"option[value={author.id}", $"{author.name} - {author.email}")
+          }
+        }
+      )
+
+open Posts
+
 // if the file gets "too big" we can split it into multiple files and just add
 // more extension members to tis type
 type Posts = class end
-
-
-module Components =
-
-  let getAuthorOptions(getAuthors: unit -> Task<Author list>) =
-    fragment(
-      task {
-        let! authors = getAuthors()
-
-        return seq {
-          h("option[value=null]", text "Select an author")
-
-          for author in authors do
-            h($"option[value={author.id}", $"{author.name} - {author.email}")
-        }
-      }
-    )
 
 type Posts with
 

@@ -9,6 +9,7 @@ open Donald
 
 open Models
 open NpgsqlTypes
+open System.Web
 
 type ConnectionFactory =
   abstract member CreateConnectionAsync: unit -> Task<IDbConnection>
@@ -34,6 +35,8 @@ type PostsService =
   abstract savePost: NewPostPayload -> Task<unit>
   abstract findPostById: Guid -> Task<Post option>
   abstract updatePost: Post -> Task<unit>
+  abstract findPostSummaries: unit -> Task<PostSummary list>
+  abstract findPostByTitleAndSlug: string * string -> Task<Post option>
 
 type AuthorsService =
   abstract findAuthors: unit -> Task<Author list>
@@ -56,11 +59,6 @@ module Mappings =
           socialNetworks = Map.empty
         }
     | Some id ->
-
-      let name = reader.ReadString("author_name")
-      let email = reader.ReadString("author_email")
-      let bio = reader.ReadString("author_bio")
-
       let socialNetworks =
         reader.ReadStringOption("author_social_networks")
         |> Option.map(
@@ -70,40 +68,38 @@ module Mappings =
 
       {
         id = id
-        name = name
-        email = email
-        bio = bio
+        name = reader.ReadString("author_name")
+        email = reader.ReadString("author_email")
+        bio = reader.ReadString("author_bio")
         socialNetworks = socialNetworks
       }
 
-  let postMapper authorMapper (reader: IDataReader) =
-    let id = reader.ReadGuid("id")
-    let title = reader.ReadString("title")
-    let content = reader.ReadString("content")
-
-    let status =
-      reader.ReadString("status")
+  let postMapper authorMapper (reader: IDataReader) = {
+    id = reader.ReadGuid("id")
+    title = reader.ReadString("title")
+    content = reader.ReadString("content")
+    status =
+      reader.ReadString "status"
       |> function
         | "draft" -> Draft
         | "published" -> Published
         | _ -> failwith "Invalid Post Status"
+    slug = reader.ReadStringOption("slug")
+    createdAt = reader.ReadDateTime("created_at")
+    updatedAt = reader.ReadDateTime("updated_at")
+    publishedAt = reader.ReadDateTimeOption("published_at")
+    author = authorMapper reader
+  }
 
-    let createdAt = reader.ReadDateTime("created_at")
-    let updatedAt = reader.ReadDateTime("updated_at")
-    let publishedAt = reader.ReadDateTimeOption("published_at")
-    let slug = reader.ReadStringOption("slug")
-
-    {
-      id = id
-      title = title
-      content = content
-      status = status
-      slug = slug
-      author = authorMapper reader
-      createdAt = createdAt
-      updatedAt = updatedAt
-      publishedAt = publishedAt
-    }
+  let summaryLikeMapper(reader: IDataReader) = {|
+    id = reader.ReadGuid("id")
+    title = reader.ReadString("title")
+    content = reader.ReadString("content")
+    publishedAt = reader.ReadDateTime("published_at")
+    slug = reader.ReadString("slug")
+    authorName =
+      reader.ReadStringOption("author_name") |> Option.defaultValue "Unknown"
+  |}
 
 module Queries =
   [<Literal>]
@@ -118,6 +114,33 @@ module Queries =
         posts p
     LEFT JOIN
         authors a ON p.author = a.id"""
+
+  [<Literal>]
+  let selectPostSummary =
+    """
+    SELECT
+      p.id as id, p.title as title, p.content as content,
+      p.published_at as published_at, p.slug as slug, a.name as author_name
+    FROM
+      posts p
+    LEFT JOIN
+      authors a ON p.author_id = a.id
+    WHERE p.status = 'published'
+    """
+
+  [<Literal>]
+  let postByTitleAndSlug =
+    """
+    SELECT
+      p.id as id, p.title as title, p.content as content, p.status as status, p.slug as slug,
+      p.created_at as created_at , p.updated_at as updated_at, p.published_at as published_at,
+      a.id as author_id, a.name as author_name, a.email as author_email, a.bio as author_bio,
+      a.social_networks as author_social_networks
+    FROM
+      posts p
+    LEFT JOIN
+      authors a ON p.author_id = a.id
+    WHERE p.title = @title AND p.slug = @slug"""
 
   [<Literal>]
   let insertPost =
@@ -298,6 +321,44 @@ module Posts =
           return if result = 0 then failwith "Failed to save post" else ()
         }
 
+        member _.findPostSummaries() = task {
+          use! connection = connectionFactory.CreateConnectionAsync()
+
+          let! summaryLike =
+            connection
+            |> Db.newCommand Queries.selectPostSummary
+            |> Db.Async.query(Mappings.summaryLikeMapper)
+
+          let summaries =
+            summaryLike
+            |> List.map(fun sLike -> {
+              id = sLike.id
+              title = sLike.title
+              summary = sLike.content[0..100]
+              authorName = sLike.authorName
+              permanentPath =
+                $"/posts/{HttpUtility.HtmlEncode(sLike.title)}_{sLike.slug}"
+              publishedAt = sLike.publishedAt
+            })
+
+          return summaries
+        }
+
+        member _.findPostByTitleAndSlug(title, slug) = task {
+          use! connection = connectionFactory.CreateConnectionAsync()
+
+          let! postWithAuthor =
+            connection
+            |> Db.newCommand Queries.postByTitleAndSlug
+            |> Db.setParams [
+              "title", SqlType.String title
+              "slug", SqlType.String slug
+            ]
+            |> Db.Async.querySingle(Mappings.postMapper Mappings.authorMapper)
+
+          return postWithAuthor
+        }
+
     }
 
 
@@ -305,7 +366,7 @@ module Authors =
 
   let getAuthorService(connectionFactory: ConnectionFactory) =
     { new AuthorsService with
-        member this.findAuthors() = task {
+        member _.findAuthors() = task {
           use! connection = connectionFactory.CreateConnectionAsync()
 
           let! authors =
@@ -316,7 +377,7 @@ module Authors =
           return authors
         }
 
-        member this.saveAuthor(author) = task {
+        member _.saveAuthor(author) = task {
           let! connection = connectionFactory.CreateConnectionAsync()
 
           use cmd =
@@ -345,7 +406,7 @@ module Authors =
           return if result = 0 then failwith "Failed to save author" else ()
         }
 
-        member this.updateAuthor(author) = task {
+        member _.updateAuthor(author) = task {
 
           let! connection = connectionFactory.CreateConnectionAsync()
 

@@ -26,6 +26,15 @@ type Post = {
   publishedAt: DateTime option
 }
 
+type PostSummary = {
+  id: Guid
+  title: string
+  summary: string
+  authorName: string
+  permanentPath: string
+  publishedAt: DateTime
+}
+
 type NewPostPayload = {
   title: string
   content: string
